@@ -17,10 +17,10 @@ export default function Home() {
       <Header onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
       <div className="flex-1 flex overflow-hidden">
         {isSidebarOpen && (
-          <div className="hidden md:flex flex-col w-64 bg-white">
+          <div className="hidden md:flex flex-col w-64 bg-gray-900">
             <div className="pt-4 px-4">
-              <h1 className="text-2xl">Lost Item Maps</h1>
-              <Separator className="my-4" />
+              <h1 className="text-2xl text-white">Lost Item Maps</h1>
+              {/*<Separator className="my-4" />*/}
             </div>
             <div className="flex-1">
               <Sidebar />
@@ -32,7 +32,7 @@ export default function Home() {
                     <AvatarFallback className="bg-black text-white">OS</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col items-start">
-                    <span className="text-sm font-medium">ユーザー名</span>
+                    <span className="text-sm font-medium text-white">ユーザー名</span>
                     <span className="text-xs text-muted-foreground">アカウント設定</span>
                   </div>
                 </Link>
