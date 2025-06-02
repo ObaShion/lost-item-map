@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Home, Settings, Users } from "lucide-react";
+import { Home, Settings } from "lucide-react";
 import Link from "next/link";
 
 export function Sidebar() {
