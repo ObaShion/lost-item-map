@@ -17,12 +17,6 @@ export function Sidebar() {
                 </Link>
               </Button>
               <Button asChild variant="ghost" className="w-full justify-start">
-                <Link href="/items">
-                  <Users className="mr-2 h-4 w-4" />
-                  落とし物一覧
-                </Link>
-              </Button>
-              <Button asChild variant="ghost" className="w-full justify-start">
                 <Link href="/settings">
                   <Settings className="mr-2 h-4 w-4" />
                   設定

@@ -5,9 +5,6 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -24,19 +21,6 @@ export default function Home() {
             </div>
             <div className="flex-1">
               <Sidebar />
-            </div>
-            <div className="border-t p-4">
-              <Button asChild variant="ghost" className="w-full justify-start">
-                <Link href="/account" className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-black text-white">OS</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm font-medium">ユーザー名</span>
-                    <span className="text-xs text-muted-foreground">アカウント設定</span>
-                  </div>
-                </Link>
-              </Button>
             </div>
           </div>
         )}

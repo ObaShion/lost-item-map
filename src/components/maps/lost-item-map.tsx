@@ -1,121 +1,193 @@
 'use client'
-import { Map } from '@vis.gl/react-maplibre'
-import React, { useState, useCallback } from 'react'
-import { Button } from "@/components/ui/button"
-import { Plus, MapPin } from "lucide-react"
-import LostItemForm from "@/components/forms/lost-item-form"
-import LostItemFormAI from "@/components/forms/lost-item-form-ai"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { motion } from "motion/react"
-// import {
-//     DropdownMenu,
-//     DropdownMenuContent,
-//     DropdownMenuItem,
-//     DropdownMenuTrigger,
-// } from "@/components/ui/dropdown-menu"
+import { Map, Marker, Popup } from '@vis.gl/react-maplibre'
+import React, { useState, useCallback, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Plus, MapPin } from 'lucide-react'
+import LostItemForm from '@/components/forms/lost-item-form'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from '@/components/ui/dialog'
+import { motion } from 'motion/react'
+import { createClient } from '@/utils/supabase/client'
+
+interface LostItem {
+    id: number
+    title: string
+    description: string
+    lat: number
+    lng: number
+    is_find: boolean
+}
 
 const LostItemMap: React.FC = () => {
+    const [items, setItems] = useState<LostItem[]>([])
+    const [selectedPin, setSelectedPin] = useState<{
+        id: number
+        title: string
+        description: string
+        lat: number
+        lng: number
+        is_find: boolean
+    } | null>(null)
     const [isFormOpen, setIsFormOpen] = useState(false)
-    const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null)
+    const [selectedLocation, setSelectedLocation] = useState<{
+        lat: number
+        lng: number
+    } | null>(null)
     const [isReporting, setIsReporting] = useState(false)
-    const [isAIMode, setIsAIMode] = useState(false)
 
-    // 地図クリック時の座標取得
-    const handleMapClick = useCallback((e: { lngLat?: { lat: number; lng: number } }) => {
-        if (!isReporting) return
-        if (!e.lngLat) return
-        setSelectedLocation({ lat: e.lngLat.lat, lng: e.lngLat.lng })
-        setIsFormOpen(true)
-        setIsReporting(false)
-    }, [isReporting])
+    const handleMapClick = useCallback(
+        (e: { lngLat?: { lat: number; lng: number } }) => {
+            if (!isReporting || !e.lngLat) return
+            setSelectedLocation({ lat: e.lngLat.lat, lng: e.lngLat.lng })
+            setIsFormOpen(true)
+            setIsReporting(false)
+        },
+        [isReporting],
+    )
 
-    // 報告ボタンクリック時
     function handleReportClick() {
         setIsReporting(true)
         setSelectedLocation(null)
     }
 
-    // // AIモードで報告
-    // function handleAIReport() {
-    //     setIsAIMode(true)
-    //     handleReportClick()
-    // }
-
-    // // 手動モードで報告
-    // function handleManualReport() {
-    //     setIsAIMode(false)
-    //     handleReportClick()
-    // }
-
-    // キャンセルボタンクリック時
     function handleCancel() {
         setIsReporting(false)
         setSelectedLocation(null)
+    }
+
+    const dataFetch = () => {
+        const supabase = createClient()
+        supabase
+            .from('lost-items')
+            .select('id, title, description, location')
+            .eq('is_find', 'False')
+            .then(({ data, error }) => {
+                if (error || !data) return
+                const parsed: LostItem[] = data.map(item => {
+                    let lng = 0,
+                        lat = 0
+                    if (typeof item.location === 'string') {
+                        const [x, y] = item.location
+                            .replace(/^POINT\(|\)$/g, '')
+                            .split(' ')
+                        lng = parseFloat(x)
+                        lat = parseFloat(y)
+                    } else if (item.location?.coordinates) {
+                        ;[lng, lat] = item.location.coordinates
+                    }
+                    return {
+                        id: item.id,
+                        title: item.title,
+                        description: item.description,
+                        lng,
+                        lat,
+                        is_find: false,
+                    }
+                })
+                setItems(parsed)
+            })
+    }
+
+    useEffect(() => {
+        dataFetch()
+    }, [])
+
+    const handleMarkAsFound = async () => {
+        if (!selectedPin) return
+        
+        const supabase = createClient()
+        const { error } = await supabase
+            .from('lost-items')
+            .update({ is_find: true })
+            .eq('id', selectedPin.id)
+        
+        if (!error) {
+            dataFetch()
+            setSelectedPin(null)
+        }
     }
 
     return (
         <div className="relative w-full h-full">
             <div className="absolute inset-0 w-full h-full overflow-hidden">
                 <Map
-                    initialViewState={{
-                        longitude: 139.95491810040247,
-                        latitude: 35.83347653619293,
-                        zoom: 15
-                    }}
+                    initialViewState={{ longitude: 139.956233496181, latitude: 35.83399348114067, zoom: 15 }}
                     mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
-                    style={{position: "absolute", top: 0, bottom: 0, width: "100%"}}
+                    style={{ position: 'absolute', top: 0, bottom: 0, width: '100%' }}
                     onClick={handleMapClick}
-                />
+                >
+                    {items.map(item => (
+                        <Marker
+                            key={item.id}
+                            longitude={item.lng}
+                            latitude={item.lat}
+                            color="#FF0000"
+                        >
+                            <div
+                                onClick={() =>
+                                    setSelectedPin({
+                                        id: item.id,
+                                        title: item.title,
+                                        description: item.description,
+                                        lat: item.lat,
+                                        lng: item.lng,
+                                        is_find: item.is_find,
+                                    })
+                                }
+                                className="w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-md cursor-pointer hover:scale-110 transition-transform"
+                            />
+                        </Marker>
+                    ))}
+                </Map>
             </div>
-            {/* 上部中央の案内表示 */}
+
+            <Dialog open={selectedPin !== null} onOpenChange={() => setSelectedPin(null)}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>{selectedPin?.title}</DialogTitle>
+                        <DialogDescription>
+                            {selectedPin?.description}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {!selectedPin?.is_find && (
+                        <Button 
+                            onClick={handleMarkAsFound}
+                            className="w-full mt-4"
+                        >
+                            見つかりました
+                        </Button>
+                    )}
+                </DialogContent>
+            </Dialog>
+
             {isReporting && (
-                <motion.div 
-                className="absolute top-6 right-5 left-5 sm:right-50 sm:left-50"
-                initial={{ opacity: 0, y: -20, filter: 'blur(5px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                transition={{ duration: 0.2 }}
+                <motion.div
+                    className="absolute top-6 right-5 left-5 sm:right-50 sm:left-50"
+                    initial={{ opacity: 0, y: -20, filter: 'blur(5px)' }}
+                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                    transition={{ duration: 0.2 }}
                 >
                     <div className="flex items-center gap-2 px-4 py-5 bg-white/90 rounded-xl shadow-lg border border-gray-200 backdrop-blur-md">
                         <MapPin className="text-blue-500 w-6 h-6 sm:w-5 sm:h-5" />
-                        <span className="font-semibold text-base sm:text-base text-gray-800">地図上の場所をタップしてください</span>
+                        <span className="font-semibold text-base sm:text-base text-gray-800">
+              地図上の場所をタップしてください
+            </span>
                     </div>
                 </motion.div>
             )}
+
             <div className="absolute bottom-0 right-0 mb-11 mr-4 flex flex-col items-end space-y-5">
-                {!isReporting && (
-                    // ドロップダウンメニューを非表示にして、手動モードのみ表示
-                    // <DropdownMenu>
-                    //     <DropdownMenuTrigger asChild>
-                    //         <Button
-                    //             size="lg"
-                    //             className="rounded-full shadow-lg"
-                    //             onClick={handleReportClick}
-                    //         >
-                    //             落とし物を報告
-                    //             <Plus className="h-6 w-6 ml-2" />
-                    //         </Button>
-                    //     </DropdownMenuTrigger>
-                    //     <DropdownMenuContent align="end" className="w-48">
-                    //         <DropdownMenuItem onClick={handleAIReport}>
-                    //             <Bot className="mr-2 h-4 w-4" />
-                    //             <span>AIで登録</span>
-                    //         </DropdownMenuItem>
-                    //         <DropdownMenuItem onClick={handleManualReport}>
-                    //             <PenLine className="mr-2 h-4 w-4" />
-                    //             <span>手動で登録</span>
-                    //         </DropdownMenuItem>
-                    //     </DropdownMenuContent>
-                    // </DropdownMenu>
-                    <Button
-                    size="lg"
-                    className="rounded-full shadow-lg"
-                    onClick={handleReportClick}
-                >
-                    落とし物を報告
-                    <Plus className="h-6 w-6 ml-2" />
-                </Button>
-                )}
-                {isReporting && (
+                {!isReporting ? (
+                    <Button size="lg" className="rounded-full shadow-lg" onClick={handleReportClick}>
+                        落とし物を報告
+                        <Plus className="h-6 w-6 ml-2" />
+                    </Button>
+                ) : (
                     <Button
                         variant="destructive"
                         size="lg"
@@ -126,30 +198,22 @@ const LostItemMap: React.FC = () => {
                     </Button>
                 )}
             </div>
+
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
-                        <DialogTitle>
-                            {isAIMode ? 'AIで落とし物を報告' : '落とし物を報告'}
-                        </DialogTitle>
+                        <DialogTitle>落とし物を報告</DialogTitle>
                         <DialogDescription>
-                            {isAIMode 
-                                ? 'AIが落とし物の情報を分析して登録します。'
-                                : '見つけた落とし物の情報を入力してください。'
-                            }
+                            見つけた落とし物の情報を入力してください。
                         </DialogDescription>
                     </DialogHeader>
-                    {isAIMode ? (
-                        <LostItemFormAI
-                            onSuccess={() => setIsFormOpen(false)}
-                            selectedLocation={selectedLocation}
-                        />
-                    ) : (
-                        <LostItemForm
-                            onSuccess={() => setIsFormOpen(false)}
-                            selectedLocation={selectedLocation}
-                        />
-                    )}
+                    <LostItemForm
+                        onSuccess={() => {
+                            dataFetch()
+                            setIsFormOpen(false)
+                        }}
+                        selectedLocation={selectedLocation}
+                    />
                 </DialogContent>
             </Dialog>
         </div>
