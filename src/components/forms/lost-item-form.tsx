@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import React, { useCallback, useEffect, useState } from "react"
 import { Map, Marker, MarkerDragEvent } from '@vis.gl/react-maplibre'
+import {createClient} from "@/utils/supabase/client";
 
 interface LostItemFormProps {
     onSuccess?: () => void
@@ -49,18 +50,32 @@ const LostItemForm: React.FC<LostItemFormProps> = ({ onSuccess, selectedLocation
         }
     }, [initialLocation, form])
 
-    // フォームの送信
-    function onSubmit(values: z.infer<typeof formSchema>) {
-        console.log("onSubmit called", values)
-        onSuccess?.()
-    }
-    
     // マーカーをドラッグした時の処理
     const onMarkerDragEnd = useCallback((event: MarkerDragEvent) => {
         const newLocation = { lat: event.lngLat.lat, lng: event.lngLat.lng }
         setCurrentLocation(newLocation)
         form.setValue('location', `${newLocation.lat}, ${newLocation.lng}`)
     }, [form]);
+
+    // フォームの送信
+    const onSubmit = useCallback(
+        async (values: z.infer<typeof formSchema>) => {
+            const supabase = createClient()
+            const { error } = await supabase
+                .from('lost-items')
+                .insert({
+                    title: values.title,
+                    description: values.description,
+                    location: `POINT(${currentLocation?.lng ?? 0} ${currentLocation?.lat ?? 0})`,
+                })
+            if (error) {
+                console.error("Error inserting lost item:", error)
+                return
+            }
+            onSuccess?.()
+        },
+        [currentLocation, onSuccess],
+    )
 
     return (
         <>
