@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
-import Link from "next/link";
 import { MobileNav } from "./mobile-nav";
 
 interface HeaderProps {

@@ -1,5 +1,5 @@
 'use client'
-import { Map, Marker, Popup } from '@vis.gl/react-maplibre'
+import { Map, Marker } from '@vis.gl/react-maplibre'
 import React, { useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Plus, MapPin } from 'lucide-react'
